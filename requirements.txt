@@ -1,0 +1,19 @@
+# Donnees vectorielles
+geopandas
+shapely
+pyogrio
+fiona
+
+# Donnees raster
+rasterio
+gdal
+rioxarray
+
+# Projection
+pyproj
+
+# Interface
+pyside6
+
+# Qualite logiciel
+pytest
