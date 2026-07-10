@@ -35,6 +35,27 @@ Le moteur métier (*Core*) est indépendant de toute interface (CLI, application
 - **Interface** : PySide6
 - **Qualité** : pytest, logging
 
+## Installation
+
+L'installation passe par [conda](https://docs.conda.io/en/latest/miniconda.html) (Miniconda suffit) via le canal `conda-forge`, recommandé pour la stack géospatiale Python (GDAL, Fiona, Rasterio ont des dépendances binaires C/C++ que pip gère mal sous Windows).
+
+```bash
+conda env create -f environment.yml
+conda activate geodataengine
+```
+
+Pour mettre à jour l'environnement après une modification de `environment.yml` :
+
+```bash
+conda env update -f environment.yml --prune
+```
+
+Activer ensuite `nbstripout` (une fois par clone) pour que les sorties des notebooks (cartes, images...) ne soient jamais committées :
+
+```bash
+nbstripout --install --attributes .gitattributes
+```
+
 ## Base de données géographique
 
 Format principal : **GeoPackage** (standard OGC, ouvert, compatible QGIS et ArcGIS Pro, facilement distribuable). Évolutions envisagées : PostGIS, File Geodatabase.

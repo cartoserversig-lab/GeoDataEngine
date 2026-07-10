@@ -1,0 +1,39 @@
+name: geodataengine
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+
+  # Donnees vectorielles
+  - geopandas
+  - shapely
+  - pyogrio
+  - fiona
+
+  # Donnees raster
+  - rasterio
+  - gdal
+  - rioxarray
+
+  # Lidar (nuages de points)
+  - pdal
+  - python-pdal
+
+  # Projection
+  - pyproj
+
+  # Appels HTTP / API
+  - requests
+
+  # Interface
+  - pyside6
+
+  # Qualite logiciel
+  - pytest
+
+  # Exploration / notebooks
+  - jupyterlab
+  - ipykernel
+  - leafmap
+  - setuptools<81  # leafmap importe encore pkg_resources, retire de setuptools>=81
+  - nbstripout
