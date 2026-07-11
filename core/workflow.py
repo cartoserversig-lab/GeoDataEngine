@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from pathlib import Path
 
 from core.config import Entity, load_entities
@@ -22,7 +23,7 @@ from download.reseaux import download_reseaux
 from download.risques import download_risques
 from processing.clipping import clip_all_vector_layers, clip_raster_to_boundary
 from processing.reprojection import ReprojectionError, reproject_to_target_crs
-from processing.validation import check_all_vector_layers, check_crs_consistency
+from processing.validation import check_all_vector_layers, check_crs_consistency, write_quality_report
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,9 @@ DEFAULT_CLIP_BUFFER = 50
 
 
 def run_quality_checks(
-    data_dir: str | Path = DEFAULT_DATA_DIR, auto_reproject: bool = False
+    data_dir: str | Path = DEFAULT_DATA_DIR,
+    auto_reproject: bool = False,
+    write_log: bool = True,
 ) -> None:
     """Etape "Controle qualite" du pipeline (CDC section 5.1), puis "Reprojection".
 
@@ -48,13 +51,18 @@ def run_quality_checks(
 
     Si auto_reproject est True, les fichiers vecteur/raster non conformes
     au CRS attendu sont automatiquement reprojetes (etape "Reprojection"
-    du CDC), puis le controle CRS est relance. Sinon, une erreur est levee
-    listant les fichiers en cause. Le lidar (.laz/.las) n'est pas
-    reprojete automatiquement.
+    du CDC), puis le controle CRS est relance. Le lidar (.laz/.las) n'est
+    pas reprojete automatiquement.
 
-    Toute erreur geometrique detectee leve egalement une erreur : ces
-    problemes ne peuvent pas etre corriges automatiquement.
+    Si write_log est True (defaut), un rapport texte est ecrit dans
+    data_dir/logs/controle_qualite_<horodatage>.txt, que des problemes
+    aient ete detectes ou non.
+
+    Une erreur est levee si des incoherences de CRS ou des problemes
+    geometriques subsistent apres l'eventuelle reprojection automatique :
+    ces derniers ne peuvent pas etre corriges automatiquement.
     """
+    data_dir = Path(data_dir)
     crs_issues = check_crs_consistency(data_dir)
 
     if crs_issues and auto_reproject:
@@ -76,6 +84,14 @@ def run_quality_checks(
 
         crs_issues = check_crs_consistency(data_dir)
 
+    geometry_issues = check_all_vector_layers(data_dir)
+
+    if write_log:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_path = data_dir / "logs" / f"controle_qualite_{timestamp}.txt"
+        write_quality_report(crs_issues, geometry_issues, log_path)
+        logger.info("Rapport de controle qualite ecrit dans %s", log_path)
+
     if crs_issues:
         details = "\n".join(
             f"  - {issue.fichier}"
@@ -84,8 +100,6 @@ def run_quality_checks(
             for issue in crs_issues
         )
         raise ValueError(f"Incoherence de CRS detectee :\n{details}")
-
-    geometry_issues = check_all_vector_layers(data_dir)
 
     if geometry_issues:
         details = "\n".join(

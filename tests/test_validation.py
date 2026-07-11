@@ -3,10 +3,15 @@ import numpy as np
 import rasterio
 from shapely.geometry import Point, Polygon
 
+from pathlib import Path
+
 from processing.validation import (
+    CrsIssue,
+    GeometryIssue,
     check_all_vector_layers,
     check_crs_consistency,
     check_vector_layer,
+    write_quality_report,
 )
 
 
@@ -118,3 +123,33 @@ def test_check_all_vector_layers_handles_multi_layer_gpkg(tmp_path):
 
     assert "multi.gpkg::layer_ok" not in results
     assert "multi.gpkg::layer_bad" in results
+
+
+def test_write_quality_report_ok(tmp_path):
+    output_path = tmp_path / "logs" / "rapport.txt"
+
+    write_quality_report([], {}, output_path)
+
+    content = output_path.read_text(encoding="utf-8")
+    assert "OK : aucune incoherence detectee." in content
+    assert "OK : aucun probleme detecte." in content
+
+
+def test_write_quality_report_with_issues(tmp_path):
+    crs_issues = [
+        CrsIssue(fichier=Path("a.gpkg"), couche=None, crs_trouve="EPSG:4326", crs_attendu="EPSG:2154")
+    ]
+    geometry_issues = {
+        "b.gpkg": [
+            GeometryIssue(fichier=Path("b.gpkg"), couche=None, index=0, probleme="Geometrie invalide")
+        ]
+    }
+    output_path = tmp_path / "logs" / "rapport.txt"
+
+    write_quality_report(crs_issues, geometry_issues, output_path)
+
+    content = output_path.read_text(encoding="utf-8")
+    assert "a.gpkg" in content
+    assert "EPSG:4326" in content
+    assert "b.gpkg" in content
+    assert "Geometrie invalide" in content

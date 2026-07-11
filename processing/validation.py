@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 import geopandas as gpd
@@ -256,3 +257,47 @@ def check_all_vector_layers(
                 results[key] = issues
 
     return results
+
+
+def format_quality_report(
+    crs_issues: list[CrsIssue],
+    geometry_issues: dict[str, list[GeometryIssue]],
+) -> str:
+    """Formate un rapport texte lisible du controle qualite (CRS + geometrie, CDC section 5.1)."""
+    lines = [
+        "=== Controle qualite GeoData Engine ===",
+        f"Date : {datetime.now().isoformat(timespec='seconds')}",
+        "",
+        "--- Coherence des systemes de coordonnees (CRS) ---",
+    ]
+
+    if crs_issues:
+        for issue in crs_issues:
+            label = str(issue.fichier) + (f"::{issue.couche}" if issue.couche else "")
+            lines.append(f"  - {label} : {issue.crs_trouve} (attendu {issue.crs_attendu})")
+    else:
+        lines.append("OK : aucune incoherence detectee.")
+
+    lines.append("")
+    lines.append("--- Controles geometriques (CRS identifie, geometrie valide, coherence spatiale) ---")
+
+    if geometry_issues:
+        for key, issues in geometry_issues.items():
+            for issue in issues:
+                lines.append(f"  - {key} : {issue.probleme}")
+    else:
+        lines.append("OK : aucun probleme detecte.")
+
+    return "\n".join(lines) + "\n"
+
+
+def write_quality_report(
+    crs_issues: list[CrsIssue],
+    geometry_issues: dict[str, list[GeometryIssue]],
+    output_path: str | Path,
+) -> Path:
+    """Ecrit le rapport de controle qualite (voir format_quality_report) dans un fichier texte."""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(format_quality_report(crs_issues, geometry_issues), encoding="utf-8")
+    return output_path
