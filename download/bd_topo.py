@@ -26,6 +26,8 @@ DEFAULT_LAYERS = {
     "batiment": "BDTOPO_V3:batiment",
     "troncon_de_route": "BDTOPO_V3:troncon_de_route",
     "troncon_hydrographique": "BDTOPO_V3:troncon_hydrographique",
+    "haie": "BDTOPO_V3:haie",
+    "zone_de_vegetation": "BDTOPO_V3:zone_de_vegetation",
 }
 
 
