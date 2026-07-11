@@ -26,9 +26,9 @@ TILE_FILENAME_FIELD = "name_download"
 DOWNLOAD_TIMEOUT = 300
 DOWNLOAD_CHUNK_SIZE = 1024 * 1024
 
-# Repertoire de sortie par defaut : data/raster/lidar a la racine du depot.
+# Repertoire de sortie par defaut : data/raw/raster/lidar a la racine du depot.
 # A terme, ce chemin sera fourni par core/project.py (gestion du projet) plutot que fige ici.
-DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "data" / "raster" / "lidar"
+DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "data" / "raw" / "raster" / "lidar"
 
 
 class LidarError(RuntimeError):

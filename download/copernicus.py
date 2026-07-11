@@ -40,9 +40,9 @@ DEFAULT_BANDS = [
 
 MAX_CLOUD_COVER = 20  # % ; seuil sous lequel chercher la scene la plus recente
 
-# Repertoire de sortie par defaut : data/raster/sentinel a la racine du depot.
+# Repertoire de sortie par defaut : data/raw/raster/sentinel a la racine du depot.
 # A terme, ce chemin sera fourni par core/project.py (gestion du projet) plutot que fige ici.
-DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "data" / "raster" / "sentinel"
+DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "data" / "raw" / "raster" / "sentinel"
 
 _TO_WGS84 = Transformer.from_crs(TARGET_CRS, "EPSG:4326", always_xy=True)
 

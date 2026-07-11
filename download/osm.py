@@ -15,9 +15,9 @@ from download.wfs_client import normalize_datetime_columns
 
 logger = logging.getLogger(__name__)
 
-# Repertoire de sortie par defaut : data/vector/infrastructures a la racine du depot.
+# Repertoire de sortie par defaut : data/raw/vector/infrastructures a la racine du depot.
 # A terme, ce chemin sera fourni par core/project.py (gestion du projet) plutot que fige ici.
-DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "data" / "vector" / "infrastructures"
+DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "data" / "raw" / "vector" / "infrastructures"
 
 # Categories d'infrastructures interrogees par defaut (tags OpenStreetMap).
 # Reference des tags : https://wiki.openstreetmap.org/wiki/Map_features
