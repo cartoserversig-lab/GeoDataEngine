@@ -8,6 +8,7 @@ from pathlib import Path
 import requests
 
 from core.config import TARGET_CRS
+from database.metadata import record_layer_metadata
 from download.wfs_client import WfsError, fetch_wfs_features
 
 logger = logging.getLogger(__name__)
@@ -90,5 +91,13 @@ def download_lidar(
         logger.info("Telechargement de la dalle Lidar HD : %s", filename)
         _download_tile(url, output_path)
         downloaded.append(output_path)
+
+        record_layer_metadata(
+            layer=f"lidar_{output_path.stem}",
+            source="Lidar HD (IGN)",
+            producteur="IGN",
+            fichier=output_path,
+            crs=TARGET_CRS,
+        )
 
     return downloaded

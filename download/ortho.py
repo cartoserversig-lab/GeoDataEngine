@@ -12,6 +12,7 @@ from rasterio.io import MemoryFile
 from rasterio.merge import merge
 
 from core.config import TARGET_CRS
+from database.metadata import record_layer_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -132,4 +133,16 @@ def download_ortho(
             mf.close()
 
     logger.info("Orthophoto ecrite dans %s", output_path)
+
+    traitements = [f"assemblage de {len(sub_bboxes)} tuiles WMS"] if len(sub_bboxes) > 1 else []
+    record_layer_metadata(
+        layer=f"ortho_{output_path.stem}",
+        source="Orthophotographie 20cm (IGN)",
+        producteur="IGN",
+        fichier=output_path,
+        crs=TARGET_CRS,
+        resolution=resolution,
+        traitements=traitements,
+    )
+
     return output_path

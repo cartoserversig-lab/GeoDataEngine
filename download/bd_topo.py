@@ -8,6 +8,7 @@ from pathlib import Path
 import geopandas as gpd
 
 from core.config import TARGET_CRS
+from database.metadata import record_layer_metadata
 from download.wfs_client import WfsError, fetch_wfs_features
 
 logger = logging.getLogger(__name__)
@@ -62,5 +63,13 @@ def download_bd_topo(
         gdf.to_file(output_path, driver="GPKG")
         written[name] = output_path
         logger.info("%s : %d entites ecrites dans %s", name, len(gdf), output_path)
+
+        record_layer_metadata(
+            layer=f"bd_topo_{name}",
+            source="BD TOPO (IGN)",
+            producteur="IGN",
+            fichier=output_path,
+            crs=TARGET_CRS,
+        )
 
     return written

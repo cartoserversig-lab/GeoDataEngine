@@ -10,6 +10,7 @@ import osmnx as ox
 from pyproj import Transformer
 
 from core.config import TARGET_CRS
+from database.metadata import record_layer_metadata
 from download.wfs_client import normalize_datetime_columns
 
 logger = logging.getLogger(__name__)
@@ -103,5 +104,14 @@ def download_osm_infrastructures(
         gdf.to_file(output_path, driver="GPKG")
         written[name] = output_path
         logger.info("%s : %d entites ecrites dans %s", name, len(gdf), output_path)
+
+        record_layer_metadata(
+            layer=f"osm_{name}",
+            source="OpenStreetMap",
+            producteur="OpenStreetMap contributors",
+            fichier=output_path,
+            crs=TARGET_CRS,
+            traitements=["reprojection EPSG:4326 -> EPSG:2154"],
+        )
 
     return written
