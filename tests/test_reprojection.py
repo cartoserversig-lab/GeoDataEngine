@@ -11,7 +11,7 @@ def test_reproject_vector(tmp_path):
     gdf = gpd.GeoDataFrame({"id": [1]}, geometry=[Point(5, 45)], crs="EPSG:4326")
     gdf.to_file(path, driver="GPKG")
 
-    reproject_vector(path, target_crs="EPSG:2154")
+    reproject_vector(path, target_crs="EPSG:2154", metadata_dir=tmp_path / "metadata")
 
     result = gpd.read_file(path)
     assert result.crs.to_string() == "EPSG:2154"
@@ -31,7 +31,7 @@ def test_reproject_raster(tmp_path):
     with rasterio.open(path, "w", **profile) as dst:
         dst.write(np.zeros((1, 2, 2), dtype="uint8"))
 
-    reproject_raster(path, target_crs="EPSG:2154")
+    reproject_raster(path, target_crs="EPSG:2154", metadata_dir=tmp_path / "metadata")
 
     with rasterio.open(path) as src:
         assert src.crs.to_string() == "EPSG:2154"
@@ -42,7 +42,7 @@ def test_reproject_to_target_crs_dispatches_by_extension(tmp_path):
     gdf = gpd.GeoDataFrame({"id": [1]}, geometry=[Point(5, 45)], crs="EPSG:4326")
     gdf.to_file(path, driver="GPKG")
 
-    reproject_to_target_crs(path, target_crs="EPSG:2154")
+    reproject_to_target_crs(path, target_crs="EPSG:2154", metadata_dir=tmp_path / "metadata")
 
     result = gpd.read_file(path)
     assert result.crs.to_string() == "EPSG:2154"

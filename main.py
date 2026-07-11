@@ -97,7 +97,7 @@ def main() -> None:
         args.auto_reproject if args.auto_reproject is not None else settings.auto_reproject
     )
 
-    output_path = run_pipeline(
+    geopackage_path, filegdb_path = run_pipeline(
         csv_path=args.csv,
         data_dir=args.data_dir,
         clip_buffer=clip_buffer,
@@ -107,7 +107,7 @@ def main() -> None:
         auto_reproject=auto_reproject,
     )
 
-    print(f"Projet SIG genere : {output_path}")
+    print(f"Projet SIG genere : {geopackage_path} | {filegdb_path}")
 
 
 if __name__ == "__main__":

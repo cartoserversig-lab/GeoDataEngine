@@ -7,6 +7,7 @@ from pathlib import Path
 
 import geopandas as gpd
 
+from database.metadata import DEFAULT_METADATA_DIR, record_processing
 from processing.lidar.pipeline import run_pipeline
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ def clip_las_to_boundary(
     boundary: gpd.GeoDataFrame,
     buffer_distance: float = 0,
     output_path: str | Path | None = None,
+    metadata_dir: str | Path = DEFAULT_METADATA_DIR,
 ) -> Path:
     """Decoupe un nuage de points LAS/LAZ selon une limite (avec buffer optionnel).
 
@@ -26,7 +28,8 @@ def clip_las_to_boundary(
     limite stricte de la commune. Le decoupage utilise filters.crop avec le
     WKT de la geometrie (dissoute) de boundary + buffer.
 
-    Ecrase le fichier d'origine par defaut (output_path non fourni).
+    Ecrase le fichier d'origine par defaut (output_path non fourni). Le
+    traitement est trace dans les metadonnees (metadata_dir).
     """
     input_path = Path(input_path)
     output_path = Path(output_path) if output_path else input_path
@@ -53,6 +56,11 @@ def clip_las_to_boundary(
 
     _, num_points = run_pipeline(stages)
     tmp_path.replace(output_path)
+
+    record_processing(
+        input_path, output_path, f"decoupage nuage de points (buffer={buffer_distance}m)",
+        metadata_dir=metadata_dir,
+    )
 
     logger.info("Nuage de points decoupe : %d points -> %s", num_points, output_path)
     return output_path

@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from core.config import Entity, load_entities
+from database.filegdb import compile_filegdb
 from database.geopackage import compile_geopackage
 from download.ban import download_ban
 from download.bd_topo import download_bd_topo
@@ -167,7 +168,7 @@ def run_pipeline(
     include_lidar: bool = False,
     include_ortho: bool = False,
     auto_reproject: bool = True,
-) -> Path:
+) -> tuple[Path, Path]:
     """Execute la chaine de traitement complete (CDC section 5.3) pour chaque entite du CSV.
 
     Emprise utilisateur -> Identification des donnees necessaires ->
@@ -179,12 +180,14 @@ def run_pipeline(
     a None pour utiliser sa valeur par defaut. clip_buffer (metres) est
     utilise separement lors du decoupage des couches.
 
-    Retourne le chemin du GeoPackage final compile (data/processed/database/projet.gpkg).
+    Retourne (chemin_geopackage, chemin_filegdb), les deux bases de
+    donnees geographiques compilees dans data/processed/database/.
     """
     data_dir = Path(data_dir)
     processed_vector_dir = data_dir / "processed" / "vector"
     processed_raster_dir = data_dir / "processed" / "raster"
-    database_path = data_dir / "processed" / "database" / "projet.gpkg"
+    geopackage_path = data_dir / "processed" / "database" / "projet.gpkg"
+    filegdb_path = data_dir / "processed" / "database" / "projet.gdb"
 
     entities = load_entities(csv_path)
     logger.info("%d entite(s) a traiter.", len(entities))
@@ -219,7 +222,12 @@ def run_pipeline(
                     output_path=processed_raster_dir / "orthophoto.tif",
                 )
 
-    compile_geopackage(processed_vector_dir, database_path)
+    compile_geopackage(processed_vector_dir, geopackage_path)
+    compile_filegdb(processed_vector_dir, filegdb_path)
 
-    logger.info("Pipeline termine. GeoPackage final : %s", database_path)
-    return database_path
+    logger.info(
+        "Pipeline termine. GeoPackage : %s | File Geodatabase : %s",
+        geopackage_path,
+        filegdb_path,
+    )
+    return geopackage_path, filegdb_path

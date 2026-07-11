@@ -9,6 +9,8 @@ import geopandas as gpd
 import rasterio
 from rasterio.mask import mask as rasterio_mask
 
+from database.metadata import DEFAULT_METADATA_DIR, record_processing
+
 logger = logging.getLogger(__name__)
 
 
@@ -17,6 +19,7 @@ def clip_to_boundary(
     boundary: gpd.GeoDataFrame,
     buffer_distance: float = 0,
     output_path: str | Path | None = None,
+    metadata_dir: str | Path = DEFAULT_METADATA_DIR,
 ) -> gpd.GeoDataFrame:
     """Decoupe une couche vectorielle selon une limite (avec buffer optionnel).
 
@@ -26,7 +29,8 @@ def clip_to_boundary(
     nette (ex : batiments a cheval sur la frontiere communale).
 
     Si output_path est fourni, le resultat decoupe est egalement ecrit en
-    GeoPackage a cet emplacement.
+    GeoPackage a cet emplacement, et le traitement est trace dans les
+    metadonnees (metadata_dir, cf. database.metadata.record_processing).
     """
     gdf = gpd.read_file(input_path)
 
@@ -40,6 +44,9 @@ def clip_to_boundary(
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         clipped.to_file(output_path, driver="GPKG")
+        record_processing(
+            input_path, output_path, f"decoupage (buffer={buffer_distance}m)", metadata_dir=metadata_dir
+        )
 
     return clipped
 
@@ -49,6 +56,7 @@ def clip_all_vector_layers(
     processed_dir: str | Path,
     boundary: gpd.GeoDataFrame,
     buffer_distance: float = 0,
+    metadata_dir: str | Path = DEFAULT_METADATA_DIR,
 ) -> dict[str, Path]:
     """Decoupe tous les GeoPackage sous raw_dir selon une limite (+ buffer optionnel).
 
@@ -83,6 +91,9 @@ def clip_all_vector_layers(
         output_path = processed_dir / relative
         output_path.parent.mkdir(parents=True, exist_ok=True)
         clipped.to_file(output_path, driver="GPKG")
+        record_processing(
+            path, output_path, f"decoupage (buffer={buffer_distance}m)", metadata_dir=metadata_dir
+        )
         written[str(relative)] = output_path
         logger.info("%s : %d entites decoupees -> %s", relative, len(clipped), output_path)
 
@@ -94,6 +105,7 @@ def clip_raster_to_boundary(
     boundary: gpd.GeoDataFrame,
     buffer_distance: float = 0,
     output_path: str | Path | None = None,
+    metadata_dir: str | Path = DEFAULT_METADATA_DIR,
 ) -> Path:
     """Masque un raster selon une limite (avec buffer optionnel).
 
@@ -129,6 +141,10 @@ def clip_raster_to_boundary(
     with rasterio.open(tmp_path, "w", **profile) as dst:
         dst.write(out_image)
     tmp_path.replace(output_path)
+
+    record_processing(
+        input_path, output_path, f"masquage raster (buffer={buffer_distance}m)", metadata_dir=metadata_dir
+    )
 
     logger.info("Raster masque selon la limite : %s", output_path)
     return output_path

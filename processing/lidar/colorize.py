@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from database.metadata import DEFAULT_METADATA_DIR, record_processing
 from processing.lidar.pipeline import run_pipeline
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ def colorize_from_raster(
     raster_path: str | Path,
     output_path: str | Path | None = None,
     dimensions: dict[str, int] | None = None,
+    metadata_dir: str | Path = DEFAULT_METADATA_DIR,
 ) -> Path:
     """Assigne Red/Green/Blue a chaque point depuis un raster (orthophoto).
 
@@ -35,7 +37,8 @@ def colorize_from_raster(
     les dimensions Red/Green/Blue : l'ecriture force donc le format 7 (LAS
     1.4, GPS time + RGB), quel que soit le format d'entree.
 
-    Ecrase le fichier d'origine par defaut (output_path non fourni).
+    Ecrase le fichier d'origine par defaut (output_path non fourni). Le
+    traitement est trace dans les metadonnees (metadata_dir).
     """
     input_path = Path(input_path)
     output_path = Path(output_path) if output_path else input_path
@@ -64,6 +67,11 @@ def colorize_from_raster(
 
     _, num_points = run_pipeline(stages)
     tmp_path.replace(output_path)
+
+    record_processing(
+        input_path, output_path, f"colorisation RVB depuis {raster_path.name}",
+        metadata_dir=metadata_dir,
+    )
 
     logger.info("Nuage de points colorise : %d points -> %s", num_points, output_path)
     return output_path

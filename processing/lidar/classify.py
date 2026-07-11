@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from database.metadata import DEFAULT_METADATA_DIR, record_processing
 from processing.lidar.pipeline import run_pipeline
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ def classify_from_vectors(
     input_path: str | Path,
     output_path: str | Path,
     layers: dict[str, tuple[str | Path, int]],
+    metadata_dir: str | Path = DEFAULT_METADATA_DIR,
 ) -> Path:
     """Recale la classification des points d'apres des couches vecteur (BD TOPO).
 
@@ -40,7 +42,8 @@ def classify_from_vectors(
 
     Chaque chemin de couche vecteur doit etre un GeoPackage mono-couche
     dont le nom de la couche correspond au nom de fichier (convention des
-    connecteurs download/*.py de ce projet).
+    connecteurs download/*.py de ce projet). Le traitement est trace dans
+    les metadonnees (metadata_dir).
     """
     input_path = Path(input_path)
     output_path = Path(output_path)
@@ -74,6 +77,13 @@ def classify_from_vectors(
 
     _, num_points = run_pipeline(stages)
     tmp_path.replace(output_path)
+
+    record_processing(
+        input_path,
+        output_path,
+        f"classification recalee depuis couches vecteur : {', '.join(layers.keys())}",
+        metadata_dir=metadata_dir,
+    )
 
     logger.info("Classification recalee : %d points -> %s", num_points, output_path)
     return output_path

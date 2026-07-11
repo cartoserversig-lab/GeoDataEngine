@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from database.metadata import DEFAULT_METADATA_DIR, record_processing
 from processing.lidar.pipeline import run_pipeline
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ def compute_mnt(
     output_path: str | Path,
     resolution: float = DEFAULT_RESOLUTION,
     output_type: str = "idw",
+    metadata_dir: str | Path = DEFAULT_METADATA_DIR,
 ) -> Path:
     """Produit le Modele Numerique de Terrain (MNT) a partir des points sol.
 
@@ -30,7 +32,9 @@ def compute_mnt(
 
     output_type controle l'interpolation par cellule ('idw' = inverse
     distance weighting, ou 'min'/'max'/'mean'...). Les cellules sans point
-    sol a proximite recoivent la valeur NoData (-9999).
+    sol a proximite recoivent la valeur NoData (-9999). Le traitement est
+    trace dans les metadonnees (metadata_dir), avec resolution renseignee
+    explicitement (le nuage de points source n'a pas de resolution propre).
     """
     input_path = Path(input_path)
     output_path = Path(output_path)
@@ -55,6 +59,11 @@ def compute_mnt(
 
     _, num_points = run_pipeline(stages)
 
+    record_processing(
+        input_path, output_path, f"rasterisation MNT (sol, resolution={resolution}m)",
+        resolution=resolution, metadata_dir=metadata_dir,
+    )
+
     logger.info("MNT genere a partir de %d points sol -> %s", num_points, output_path)
     return output_path
 
@@ -64,13 +73,15 @@ def compute_mns(
     output_path: str | Path,
     resolution: float = DEFAULT_RESOLUTION,
     output_type: str = "max",
+    metadata_dir: str | Path = DEFAULT_METADATA_DIR,
 ) -> Path:
     """Produit le Modele Numerique de Surface (MNS) a partir de l'ensemble du nuage.
 
     Contrairement au MNT, aucun filtre de classification n'est applique :
     tous les points (sol, vegetation, bati...) contribuent au raster.
     output_type='max' (par defaut) capte le point le plus haut par cellule,
-    donnant le sursol (toits, canopee) plutot que le sol.
+    donnant le sursol (toits, canopee) plutot que le sol. Le traitement est
+    trace dans les metadonnees (metadata_dir).
     """
     input_path = Path(input_path)
     output_path = Path(output_path)
@@ -91,6 +102,11 @@ def compute_mns(
 
     _, num_points = run_pipeline(stages)
 
+    record_processing(
+        input_path, output_path, f"rasterisation MNS (sursol, resolution={resolution}m)",
+        resolution=resolution, metadata_dir=metadata_dir,
+    )
+
     logger.info("MNS genere a partir de %d points -> %s", num_points, output_path)
     return output_path
 
@@ -100,6 +116,7 @@ def compute_mnh(
     output_path: str | Path,
     resolution: float = DEFAULT_RESOLUTION,
     output_type: str = "max",
+    metadata_dir: str | Path = DEFAULT_METADATA_DIR,
 ) -> Path:
     """Produit le Modele Numerique de Hauteur (MNH) a partir du nuage de points.
 
@@ -110,7 +127,8 @@ def compute_mnh(
     canopee, faitage des batiments...), plutot que Z.
 
     Equivalent, sans avoir a produire ni aligner deux rasters separes, a
-    une soustraction MNS - MNT.
+    une soustraction MNS - MNT. Le traitement est trace dans les
+    metadonnees (metadata_dir).
     """
     input_path = Path(input_path)
     output_path = Path(output_path)
@@ -132,6 +150,11 @@ def compute_mnh(
     ]
 
     _, num_points = run_pipeline(stages)
+
+    record_processing(
+        input_path, output_path, f"rasterisation MNH (hag_nn, resolution={resolution}m)",
+        resolution=resolution, metadata_dir=metadata_dir,
+    )
 
     logger.info("MNH genere a partir de %d points -> %s", num_points, output_path)
     return output_path
