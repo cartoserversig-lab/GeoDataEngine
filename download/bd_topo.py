@@ -2,23 +2,17 @@
 
 from __future__ import annotations
 
-import datetime
-import io
 import logging
 from pathlib import Path
 
 import geopandas as gpd
-import pandas as pd
-import requests
 
 from core.config import TARGET_CRS
+from download.wfs_client import WfsError, fetch_wfs_features
 
 logger = logging.getLogger(__name__)
 
 WFS_URL = "https://data.geopf.fr/wfs/wfs"
-WFS_VERSION = "2.0.0"
-PAGE_SIZE = 1000
-REQUEST_TIMEOUT = 60
 
 # Repertoire de sortie par defaut : data/vector/bd_topo a la racine du depot.
 # A terme, ce chemin sera fourni par core/project.py (gestion du projet) plutot que fige ici.
@@ -34,75 +28,8 @@ DEFAULT_LAYERS = {
 }
 
 
-class BdTopoError(RuntimeError):
+class BdTopoError(WfsError):
     """Erreur lors de l'interrogation du service WFS BD TOPO."""
-
-
-def _fetch_layer(typename: str, bbox: tuple[float, float, float, float]) -> gpd.GeoDataFrame:
-    """Recupere l'integralite d'une couche WFS BD TOPO sur l'emprise donnee (pagination incluse)."""
-    xmin, ymin, xmax, ymax = bbox
-    bbox_param = f"{xmin},{ymin},{xmax},{ymax},{TARGET_CRS}"
-
-    frames: list[gpd.GeoDataFrame] = []
-    start_index = 0
-
-    while True:
-        params = {
-            "SERVICE": "WFS",
-            "VERSION": WFS_VERSION,
-            "REQUEST": "GetFeature",
-            "TYPENAMES": typename,
-            "SRSNAME": TARGET_CRS,
-            "BBOX": bbox_param,
-            "OUTPUTFORMAT": "application/json",
-            "COUNT": PAGE_SIZE,
-            "STARTINDEX": start_index,
-        }
-        response = requests.get(WFS_URL, params=params, timeout=REQUEST_TIMEOUT)
-
-        if not response.ok:
-            raise BdTopoError(
-                f"Echec de la requete WFS pour {typename} (HTTP {response.status_code}) : "
-                f"{response.text[:300]}"
-            )
-
-        if "ExceptionReport" in response.text[:500]:
-            raise BdTopoError(f"Erreur renvoyee par le WFS pour {typename} : {response.text[:500]}")
-
-        page = gpd.read_file(io.BytesIO(response.content))
-        if page.empty:
-            break
-
-        frames.append(page)
-        if len(page) < PAGE_SIZE:
-            break
-        start_index += PAGE_SIZE
-
-    if not frames:
-        return gpd.GeoDataFrame(geometry=[], crs=TARGET_CRS)
-
-    result = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), crs=TARGET_CRS)
-    return _normalize_datetime_columns(result)
-
-
-def _normalize_datetime_columns(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """Convertit les colonnes date/heure en chaines ISO.
-
-    Contournement d'un bug pyogrio a l'ecriture GPKG des colonnes datetime64[ms]
-    (resolution non nanoseconde introduite par pandas 2.x).
-    """
-    geometry_col = gdf.geometry.name
-    for col in gdf.columns:
-        if col == geometry_col:
-            continue
-
-        if pd.api.types.is_datetime64_any_dtype(gdf[col]):
-            gdf[col] = gdf[col].dt.strftime("%Y-%m-%dT%H:%M:%S")
-        elif gdf[col].dtype == object:
-            gdf[col] = gdf[col].apply(
-                lambda v: v.isoformat() if isinstance(v, (pd.Timestamp, datetime.date)) else v
-            )
-    return gdf
 
 
 def download_bd_topo(
@@ -122,7 +49,10 @@ def download_bd_topo(
     written: dict[str, Path] = {}
     for name, typename in layers.items():
         logger.info("Telechargement BD TOPO : %s", name)
-        gdf = _fetch_layer(typename, bbox)
+        try:
+            gdf: gpd.GeoDataFrame = fetch_wfs_features(WFS_URL, typename, bbox, TARGET_CRS)
+        except WfsError as exc:
+            raise BdTopoError(str(exc)) from exc
 
         if gdf.empty:
             logger.warning("Aucune entite recuperee pour la couche %s sur cette emprise.", name)
