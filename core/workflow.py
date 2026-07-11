@@ -21,6 +21,7 @@ from download.ortho import download_ortho
 from download.osm import download_osm_infrastructures
 from download.reseaux import download_reseaux
 from download.risques import download_risques
+from download.zones_protegees import download_zones_protegees
 from processing.clipping import clip_all_vector_layers, clip_raster_to_boundary
 from processing.reprojection import ReprojectionError, reproject_to_target_crs
 from processing.validation import check_all_vector_layers, check_crs_consistency, write_quality_report
@@ -145,6 +146,9 @@ def download_all_layers(
 
     logger.info("Recuperation des risques...")
     download_risques(entity.code_insee)
+
+    logger.info("Telechargement zones reglementees/protegees...")
+    download_zones_protegees(bbox)
 
     if include_lidar:
         logger.info("Telechargement Lidar HD...")
