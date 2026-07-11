@@ -21,15 +21,20 @@ class WfsError(RuntimeError):
 def fetch_wfs_features(
     wfs_url: str,
     typename: str,
-    bbox: tuple[float, float, float, float],
+    bbox: tuple[float, float, float, float] | None,
     crs: str,
+    cql_filter: str | None = None,
     version: str = DEFAULT_VERSION,
     page_size: int = DEFAULT_PAGE_SIZE,
     timeout: int = DEFAULT_TIMEOUT,
 ) -> gpd.GeoDataFrame:
-    """Recupere l'integralite d'une couche WFS sur l'emprise donnee (pagination incluse)."""
-    xmin, ymin, xmax, ymax = bbox
-    bbox_param = f"{xmin},{ymin},{xmax},{ymax},{crs}"
+    """Recupere l'integralite d'une couche WFS filtree par bbox et/ou CQL_FILTER (pagination incluse).
+
+    Au moins un des deux filtres (bbox, cql_filter) doit etre fourni, pour
+    eviter de recuperer une couche entiere par erreur.
+    """
+    if bbox is None and cql_filter is None:
+        raise WfsError("fetch_wfs_features necessite au moins bbox ou cql_filter.")
 
     frames: list[gpd.GeoDataFrame] = []
     start_index = 0
@@ -41,11 +46,15 @@ def fetch_wfs_features(
             "REQUEST": "GetFeature",
             "TYPENAMES": typename,
             "SRSNAME": crs,
-            "BBOX": bbox_param,
             "OUTPUTFORMAT": "application/json",
             "COUNT": page_size,
             "STARTINDEX": start_index,
         }
+        if bbox is not None:
+            xmin, ymin, xmax, ymax = bbox
+            params["BBOX"] = f"{xmin},{ymin},{xmax},{ymax},{crs}"
+        if cql_filter is not None:
+            params["CQL_FILTER"] = cql_filter
         response = requests.get(wfs_url, params=params, timeout=timeout)
 
         if not response.ok:

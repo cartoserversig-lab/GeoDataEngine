@@ -9,7 +9,7 @@ from pathlib import Path
 # CRS unique pour toutes les données traitées par le moteur (V1).
 TARGET_CRS = "EPSG:2154"
 
-REQUIRED_COLUMNS = ("nom_entite", "type_entite", "code_insee", "bbox")
+REQUIRED_COLUMNS = ("nom_entite", "type_entite", "code_insee")
 
 
 class ConfigError(ValueError):
@@ -23,7 +23,9 @@ class Entity:
     nom: str
     type_entite: str
     code_insee: str
-    bbox: tuple[float, float, float, float]  # (xmin, ymin, xmax, ymax) en EPSG:2154
+    # (xmin, ymin, xmax, ymax) en EPSG:2154, ou None si a calculer depuis la
+    # limite communale officielle (voir download.limites_administratives.resolve_bbox).
+    bbox: tuple[float, float, float, float] | None = None
 
 
 def _parse_bbox(raw: str, row_number: int) -> tuple[float, float, float, float]:
@@ -52,8 +54,11 @@ def _parse_bbox(raw: str, row_number: int) -> tuple[float, float, float, float]:
 def load_entities(csv_path: str | Path, delimiter: str = ";") -> list[Entity]:
     """Charge et valide le CSV des entités à traiter.
 
-    Colonnes attendues : nom_entite, type_entite, code_insee, bbox.
-    La bbox est au format [xmin,ymin,xmax,ymax] en EPSG:2154.
+    Colonnes attendues : nom_entite, type_entite, code_insee, et
+    optionnellement bbox (format [xmin,ymin,xmax,ymax] en EPSG:2154). Si la
+    colonne bbox est absente ou vide pour une ligne, elle sera calculée plus
+    tard depuis la limite communale officielle (voir
+    download.limites_administratives.resolve_bbox).
     Le délimiteur par défaut est ";" pour éviter tout conflit avec les
     virgules internes à la bbox.
     """
@@ -81,7 +86,8 @@ def load_entities(csv_path: str | Path, delimiter: str = ";") -> list[Entity]:
             if not code_insee:
                 raise ConfigError(f"Ligne {row_number} : code_insee manquant.")
 
-            bbox = _parse_bbox(row["bbox"] or "", row_number)
+            bbox_raw = (row.get("bbox") or "").strip()
+            bbox = _parse_bbox(bbox_raw, row_number) if bbox_raw else None
             entities.append(
                 Entity(nom=nom, type_entite=type_entite, code_insee=code_insee, bbox=bbox)
             )

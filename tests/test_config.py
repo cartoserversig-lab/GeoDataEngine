@@ -42,3 +42,29 @@ def test_load_entities_bbox_incoherente(tmp_path):
 
     with pytest.raises(ConfigError):
         load_entities(csv_file)
+
+
+def test_load_entities_bbox_absente(tmp_path):
+    csv_file = tmp_path / "entites.csv"
+    csv_file.write_text(
+        "nom_entite;type_entite;code_insee\nTest;commune;38185\n",
+        encoding="utf-8",
+    )
+
+    entities = load_entities(csv_file)
+
+    assert len(entities) == 1
+    assert entities[0].bbox is None
+
+
+def test_load_entities_bbox_vide(tmp_path):
+    csv_file = tmp_path / "entites.csv"
+    csv_file.write_text(
+        "nom_entite;type_entite;code_insee;bbox\nTest;commune;38185;\n",
+        encoding="utf-8",
+    )
+
+    entities = load_entities(csv_file)
+
+    assert len(entities) == 1
+    assert entities[0].bbox is None
