@@ -37,3 +37,4 @@ dependencies:
   - leafmap
   - setuptools<81  # leafmap importe encore pkg_resources, retire de setuptools>=81
   - nbstripout
+  - localtileserver  # requis par leafmap pour l'affichage de raster (add_raster)
