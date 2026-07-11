@@ -68,6 +68,15 @@ def parse_args() -> argparse.Namespace:
         help="Reprojection automatique lors du controle qualite. Defaut : valeur de settings.toml.",
     )
     parser.add_argument(
+        "--classify-lidar-from-vectors",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Recale la classification du nuage de points Lidar depuis les couches vecteur "
+            "(couteux, cf. processing/lidar/classify.py). Defaut : valeur de settings.toml."
+        ),
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Journalisation detaillee (DEBUG) au lieu du niveau INFO par defaut",
@@ -96,6 +105,11 @@ def main() -> None:
     auto_reproject = (
         args.auto_reproject if args.auto_reproject is not None else settings.auto_reproject
     )
+    classify_lidar_from_vectors = (
+        args.classify_lidar_from_vectors
+        if args.classify_lidar_from_vectors is not None
+        else settings.classify_lidar_from_vectors
+    )
 
     geopackage_path, filegdb_path = run_pipeline(
         csv_path=args.csv,
@@ -105,6 +119,7 @@ def main() -> None:
         include_lidar=include_lidar,
         include_ortho=include_ortho,
         auto_reproject=auto_reproject,
+        classify_lidar_from_vectors=classify_lidar_from_vectors,
     )
 
     print(f"Projet SIG genere : {geopackage_path} | {filegdb_path}")

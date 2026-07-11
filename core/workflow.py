@@ -6,6 +6,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+import geopandas as gpd
+
 from core.config import Entity, load_entities
 from database.filegdb import compile_filegdb
 from database.geopackage import compile_geopackage
@@ -24,10 +26,24 @@ from download.reseaux import download_reseaux
 from download.risques import download_risques
 from download.zones_protegees import download_zones_protegees
 from processing.clipping import clip_all_vector_layers, clip_raster_to_boundary
+from processing.lidar.classify import classify_from_vectors
+from processing.lidar.clip import clip_las_to_boundary
+from processing.lidar.colorize import colorize_from_raster
+from processing.lidar.merge import merge_laz_tiles
+from processing.lidar.rasterize import compute_mnh, compute_mns, compute_mnt
 from processing.reprojection import ReprojectionError, reproject_to_target_crs
 from processing.validation import check_all_vector_layers, check_crs_consistency, write_quality_report
 
 logger = logging.getLogger(__name__)
+
+# Themes vecteur (deja decoupes) et code de classification LAS a appliquer,
+# utilises par process_lidar lorsque classify_from_vectors_enabled est actif.
+# Cf. processing.lidar.classify.DEFAULT_CLASSIFICATION_CODES.
+LIDAR_CLASSIFICATION_LAYERS = {
+    "hydro": (Path("bd_topo") / "surface_hydrographique.gpkg", 9),
+    "vegetation": (Path("bd_topo") / "zone_de_vegetation.gpkg", 5),
+    "batiment": (Path("bd_topo") / "batiment.gpkg", 6),
+}
 
 # Repertoire de donnees par defaut : data/ a la racine du depot.
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[2] / "data"
@@ -160,6 +176,75 @@ def download_all_layers(
         download_ortho(bbox)
 
 
+def process_lidar(
+    data_dir: Path,
+    boundary: gpd.GeoDataFrame,
+    clip_buffer: float = DEFAULT_CLIP_BUFFER,
+    include_ortho: bool = False,
+    classify_from_vectors_enabled: bool = False,
+) -> Path | None:
+    """Etape de traitement Lidar (CDC : decompression, decoupage, harmonisation).
+
+    Fusionne, decoupe et rasterise (MNT/MNS/MNH) le nuage de points Lidar
+    HD brut ; colorise depuis l'orthophoto si include_ortho est actif et
+    que l'orthophoto traitee est disponible. Ne modifie jamais les dalles
+    source (data/raw/raster/lidar/) : tous les produits traites sont
+    ecrits dans data/processed/raster/lidar/.
+
+    La classification depuis les couches vecteur (filters.overlay,
+    processing.lidar.classify) est couteuse - voir notebook 20, un test
+    sur un nuage complet non decoupe a ete interrompu apres 20+ minutes -
+    et n'est executee que si classify_from_vectors_enabled est actif.
+    Utilise les couches vecteur deja decoupees (data/processed/vector/),
+    donc doit etre appelee apres clip_all_vector_layers.
+
+    Retourne le chemin du nuage de points final traite, ou None si aucune
+    dalle Lidar HD n'a ete telechargee.
+    """
+    raw_lidar_dir = data_dir / "raw" / "raster" / "lidar"
+    processed_lidar_dir = data_dir / "processed" / "raster" / "lidar"
+
+    if not any(raw_lidar_dir.glob("*.laz")):
+        logger.info("Aucune dalle Lidar HD dans %s, traitement Lidar ignore.", raw_lidar_dir)
+        return None
+
+    las_path = processed_lidar_dir / "nuage_points.las"
+
+    logger.info("Fusion des dalles Lidar HD...")
+    merge_laz_tiles(raw_lidar_dir, las_path)
+
+    logger.info("Decoupage du nuage de points...")
+    clip_las_to_boundary(las_path, boundary, buffer_distance=clip_buffer, output_path=las_path)
+
+    if include_ortho:
+        ortho_path = data_dir / "processed" / "raster" / "orthophoto.tif"
+        if ortho_path.exists():
+            logger.info("Colorisation du nuage de points depuis l'orthophoto...")
+            colorize_from_raster(las_path, ortho_path, output_path=las_path)
+        else:
+            logger.warning("Orthophoto traitee introuvable (%s), colorisation ignoree.", ortho_path)
+
+    logger.info("Rasterisation MNT/MNS/MNH...")
+    compute_mnt(las_path, processed_lidar_dir / "mnt.tif")
+    compute_mns(las_path, processed_lidar_dir / "mns.tif")
+    compute_mnh(las_path, processed_lidar_dir / "mnh.tif")
+
+    if classify_from_vectors_enabled:
+        processed_vector_dir = data_dir / "processed" / "vector"
+        layers = {
+            theme: (processed_vector_dir / relative, code)
+            for theme, (relative, code) in LIDAR_CLASSIFICATION_LAYERS.items()
+            if (processed_vector_dir / relative).exists()
+        }
+        if layers:
+            logger.info("Classification du nuage de points depuis les couches vecteur...")
+            classify_from_vectors(las_path, las_path, layers)
+        else:
+            logger.warning("Aucune couche vecteur disponible, classification Lidar ignoree.")
+
+    return las_path
+
+
 def run_pipeline(
     csv_path: str | Path,
     data_dir: str | Path = DEFAULT_DATA_DIR,
@@ -168,6 +253,7 @@ def run_pipeline(
     include_lidar: bool = False,
     include_ortho: bool = False,
     auto_reproject: bool = True,
+    classify_lidar_from_vectors: bool = False,
 ) -> tuple[Path, Path]:
     """Execute la chaine de traitement complete (CDC section 5.3) pour chaque entite du CSV.
 
@@ -221,6 +307,15 @@ def run_pipeline(
                     buffer_distance=clip_buffer,
                     output_path=processed_raster_dir / "orthophoto.tif",
                 )
+
+        if include_lidar:
+            process_lidar(
+                data_dir,
+                boundary,
+                clip_buffer=clip_buffer,
+                include_ortho=include_ortho,
+                classify_from_vectors_enabled=classify_lidar_from_vectors,
+            )
 
     compile_geopackage(processed_vector_dir, geopackage_path)
     compile_filegdb(processed_vector_dir, filegdb_path)

@@ -14,7 +14,8 @@ def test_load_settings_parses_file(tmp_path):
         "buffer_telechargement = 300.0\n"
         "include_lidar = true\n"
         "include_ortho = false\n"
-        "auto_reproject = false\n",
+        "auto_reproject = false\n"
+        "classify_lidar_from_vectors = true\n",
         encoding="utf-8",
     )
 
@@ -25,6 +26,7 @@ def test_load_settings_parses_file(tmp_path):
     assert settings.include_lidar is True
     assert settings.include_ortho is False
     assert settings.auto_reproject is False
+    assert settings.classify_lidar_from_vectors is True
 
 
 def test_load_settings_partial_file_uses_defaults_for_missing_keys(tmp_path):

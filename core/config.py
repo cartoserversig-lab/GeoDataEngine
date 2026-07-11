@@ -123,6 +123,10 @@ class Settings:
     include_lidar: bool = False
     include_ortho: bool = False
     auto_reproject: bool = True
+    # Desactive par defaut : filters.overlay (classification depuis les
+    # couches vecteur) est couteux et peut prendre des heures sur un nuage
+    # de points a l'echelle d'une commune entiere (voir notebook 20).
+    classify_lidar_from_vectors: bool = False
 
 
 def load_settings(path: str | Path = DEFAULT_SETTINGS_PATH) -> Settings:
@@ -144,4 +148,5 @@ def load_settings(path: str | Path = DEFAULT_SETTINGS_PATH) -> Settings:
         include_lidar=data.get("include_lidar", False),
         include_ortho=data.get("include_ortho", False),
         auto_reproject=data.get("auto_reproject", True),
+        classify_lidar_from_vectors=data.get("classify_lidar_from_vectors", False),
     )
