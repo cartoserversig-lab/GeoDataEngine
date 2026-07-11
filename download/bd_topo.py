@@ -26,8 +26,15 @@ DEFAULT_LAYERS = {
     "batiment": "BDTOPO_V3:batiment",
     "troncon_de_route": "BDTOPO_V3:troncon_de_route",
     "troncon_hydrographique": "BDTOPO_V3:troncon_hydrographique",
+    # Occupation du sol
     "haie": "BDTOPO_V3:haie",
     "zone_de_vegetation": "BDTOPO_V3:zone_de_vegetation",
+    "foret_publique": "BDTOPO_V3:foret_publique",
+    "zone_d_habitation": "BDTOPO_V3:zone_d_habitation",
+    "cimetiere": "BDTOPO_V3:cimetiere",
+    "parc_ou_reserve": "BDTOPO_V3:parc_ou_reserve",
+    "zone_d_activite_ou_d_interet": "BDTOPO_V3:zone_d_activite_ou_d_interet",
+    "terrain_de_sport": "BDTOPO_V3:terrain_de_sport",
 }
 
 
