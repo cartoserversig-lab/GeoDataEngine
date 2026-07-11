@@ -6,6 +6,8 @@ import logging
 from pathlib import Path
 
 import geopandas as gpd
+import rasterio
+from rasterio.mask import mask as rasterio_mask
 
 logger = logging.getLogger(__name__)
 
@@ -85,3 +87,48 @@ def clip_all_vector_layers(
         logger.info("%s : %d entites decoupees -> %s", relative, len(clipped), output_path)
 
     return written
+
+
+def clip_raster_to_boundary(
+    input_path: str | Path,
+    boundary: gpd.GeoDataFrame,
+    buffer_distance: float = 0,
+    output_path: str | Path | None = None,
+) -> Path:
+    """Masque un raster selon une limite (avec buffer optionnel).
+
+    Contrairement au vecteur, le raster reste rectangulaire : les pixels
+    hors du polygone (boundary + buffer) sont mis a NoData, et le raster
+    est recadre au rectangle englobant minimal de ce polygone.
+
+    Ecrase le fichier d'origine par defaut (output_path non fourni).
+    """
+    input_path = Path(input_path)
+    output_path = Path(output_path) if output_path else input_path
+
+    clip_geometry = boundary
+    if buffer_distance:
+        clip_geometry = boundary.assign(geometry=boundary.geometry.buffer(buffer_distance))
+
+    with rasterio.open(input_path) as src:
+        nodata = src.nodata if src.nodata is not None else 0
+        out_image, out_transform = rasterio_mask(
+            src, clip_geometry.geometry, crop=True, nodata=nodata
+        )
+        profile = src.profile.copy()
+
+    profile.update(
+        height=out_image.shape[1],
+        width=out_image.shape[2],
+        transform=out_transform,
+        nodata=nodata,
+    )
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = output_path.with_suffix(output_path.suffix + ".tmp")
+    with rasterio.open(tmp_path, "w", **profile) as dst:
+        dst.write(out_image)
+    tmp_path.replace(output_path)
+
+    logger.info("Raster masque selon la limite : %s", output_path)
+    return output_path

@@ -1,7 +1,13 @@
 import geopandas as gpd
-from shapely.geometry import Point, box
+import numpy as np
+import rasterio
+from shapely.geometry import Point, Polygon, box
 
-from processing.clipping import clip_all_vector_layers, clip_to_boundary
+from processing.clipping import (
+    clip_all_vector_layers,
+    clip_raster_to_boundary,
+    clip_to_boundary,
+)
 
 
 def test_clip_to_boundary_no_buffer(tmp_path):
@@ -96,3 +102,33 @@ def test_clip_all_vector_layers(tmp_path):
     output_path = written[relative_path]
     assert output_path.exists()
     assert not (processed_dir / "theme_b" / "layer_outside.gpkg").exists()
+
+
+def test_clip_raster_to_boundary_masks_outside_pixels(tmp_path):
+    path = tmp_path / "raster.tif"
+    profile = {
+        "driver": "GTiff",
+        "height": 10,
+        "width": 10,
+        "count": 1,
+        "dtype": "uint8",
+        "crs": "EPSG:2154",
+        "transform": rasterio.transform.from_bounds(0, 0, 10, 10, 10, 10),
+    }
+    with rasterio.open(path, "w", **profile) as dst:
+        dst.write(np.full((1, 10, 10), 100, dtype="uint8"))
+
+    # Triangle couvrant la moitie inferieure gauche du raster (x + y <= 10).
+    triangle = gpd.GeoDataFrame(
+        geometry=[Polygon([(0, 0), (10, 0), (0, 10)])], crs="EPSG:2154"
+    )
+    output_path = tmp_path / "masked.tif"
+
+    clip_raster_to_boundary(path, triangle, output_path=output_path)
+
+    with rasterio.open(output_path) as src:
+        data = src.read(1)
+        nodata = src.nodata
+
+    assert data[9, 0] != nodata  # coin bas-gauche : dans le triangle
+    assert data[0, 9] == nodata  # coin haut-droit : hors du triangle
