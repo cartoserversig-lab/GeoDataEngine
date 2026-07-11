@@ -10,6 +10,7 @@ dependencies:
   - pyogrio
   - fiona
   - osmnx
+  - pystac-client
 
   # Donnees raster
   - rasterio
