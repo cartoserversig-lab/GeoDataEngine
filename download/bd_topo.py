@@ -25,7 +25,15 @@ DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "data" / "raw" / "vec
 DEFAULT_LAYERS = {
     "batiment": "BDTOPO_V3:batiment",
     "troncon_de_route": "BDTOPO_V3:troncon_de_route",
+    # Hydrographie
     "troncon_hydrographique": "BDTOPO_V3:troncon_hydrographique",
+    "cours_d_eau": "BDTOPO_V3:cours_d_eau",
+    "plan_d_eau": "BDTOPO_V3:plan_d_eau",
+    "surface_hydrographique": "BDTOPO_V3:surface_hydrographique",
+    "detail_hydrographique": "BDTOPO_V3:detail_hydrographique",
+    "noeud_hydrographique": "BDTOPO_V3:noeud_hydrographique",
+    "limite_terre_mer": "BDTOPO_V3:limite_terre_mer",
+    "zone_d_estran": "BDTOPO_V3:zone_d_estran",
     # Occupation du sol
     "haie": "BDTOPO_V3:haie",
     "zone_de_vegetation": "BDTOPO_V3:zone_de_vegetation",
