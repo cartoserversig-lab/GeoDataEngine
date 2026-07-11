@@ -10,6 +10,10 @@ import geopandas as gpd
 logger = logging.getLogger(__name__)
 
 
+class GeopackageError(RuntimeError):
+    """Erreur lors de la compilation du GeoPackage final."""
+
+
 def compile_geopackage(
     processed_vector_dir: str | Path,
     output_path: str | Path,
@@ -28,7 +32,13 @@ def compile_geopackage(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     if output_path.exists():
-        output_path.unlink()
+        try:
+            output_path.unlink()
+        except PermissionError as exc:
+            raise GeopackageError(
+                f"Impossible de remplacer {output_path} : le fichier est ouvert dans un autre "
+                "programme (QGIS, notebook Jupyter...). Fermez-le puis reessayez."
+            ) from exc
 
     layer_count = 0
     for path in sorted(processed_vector_dir.rglob("*.gpkg")):

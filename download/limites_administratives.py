@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import geopandas as gpd
 
-from core.config import TARGET_CRS
+from core.config import DEFAULT_BUFFER_TELECHARGEMENT, TARGET_CRS
 from database.metadata import record_layer_metadata
 from download.wfs_client import fetch_wfs_features
 
@@ -23,7 +23,8 @@ CODE_INSEE_FIELD = "code_insee"
 
 # Marge (en metres) ajoutee autour de la limite communale lorsque la bbox
 # de telechargement doit etre calculee automatiquement (voir resolve_bbox).
-DEFAULT_BUFFER = 250
+# Reference core.config pour rester coherent avec settings.toml.
+DEFAULT_BUFFER = DEFAULT_BUFFER_TELECHARGEMENT
 
 # Repertoire de sortie par defaut : data/raw/vector/limites_administratives a la racine du depot.
 # A terme, ce chemin sera fourni par core/project.py (gestion du projet) plutot que fige ici.

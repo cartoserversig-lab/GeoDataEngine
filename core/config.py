@@ -3,13 +3,25 @@
 from __future__ import annotations
 
 import csv
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-# CRS unique pour toutes les données traitées par le moteur (V1).
+# CRS unique pour toutes les données traitées par le moteur (V1). Choix
+# architectural fixe : ni configurable ni modifiable via settings.toml,
+# car tout le pipeline (validation, reprojection...) le suppose partout.
 TARGET_CRS = "EPSG:2154"
 
 REQUIRED_COLUMNS = ("nom_entite", "type_entite", "code_insee")
+
+# Repertoire de configuration par defaut : data/configuration a la racine du depot.
+DEFAULT_CONFIG_DIR = Path(__file__).resolve().parents[2] / "data" / "configuration"
+DEFAULT_SETTINGS_PATH = DEFAULT_CONFIG_DIR / "settings.toml"
+
+# Valeurs par defaut des reglages globaux (utilisees si settings.toml est absent
+# ou ne precise pas une cle donnee).
+DEFAULT_BUFFER_DECOUPE = 50.0
+DEFAULT_BUFFER_TELECHARGEMENT = 250.0
 
 
 class ConfigError(ValueError):
@@ -96,3 +108,40 @@ def load_entities(csv_path: str | Path, delimiter: str = ";") -> list[Entity]:
         raise ConfigError(f"Aucune entité trouvée dans {csv_path.name}.")
 
     return entities
+
+
+@dataclass(frozen=True)
+class Settings:
+    """Réglages globaux du pipeline (data/configuration/settings.toml).
+
+    Ne contient que des paramètres d'exécution (buffers, options de
+    téléchargement...). Le CRS cible n'en fait pas partie : voir TARGET_CRS.
+    """
+
+    buffer_decoupe: float = DEFAULT_BUFFER_DECOUPE
+    buffer_telechargement: float = DEFAULT_BUFFER_TELECHARGEMENT
+    include_lidar: bool = False
+    include_ortho: bool = False
+    auto_reproject: bool = True
+
+
+def load_settings(path: str | Path = DEFAULT_SETTINGS_PATH) -> Settings:
+    """Charge les réglages globaux du pipeline depuis un fichier TOML.
+
+    Si le fichier est absent, retourne les valeurs par défaut (Settings()).
+    Toute clé absente du fichier utilise egalement sa valeur par défaut.
+    """
+    path = Path(path)
+    if not path.is_file():
+        return Settings()
+
+    with path.open("rb") as f:
+        data = tomllib.load(f)
+
+    return Settings(
+        buffer_decoupe=data.get("buffer_decoupe", DEFAULT_BUFFER_DECOUPE),
+        buffer_telechargement=data.get("buffer_telechargement", DEFAULT_BUFFER_TELECHARGEMENT),
+        include_lidar=data.get("include_lidar", False),
+        include_ortho=data.get("include_ortho", False),
+        auto_reproject=data.get("auto_reproject", True),
+    )
