@@ -9,6 +9,7 @@ dependencies:
   - shapely
   - pyogrio
   - fiona
+  - osmnx
 
   # Donnees raster
   - rasterio

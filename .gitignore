@@ -23,3 +23,6 @@ htmlcov/
 
 # Logs et sorties locales
 *.log
+
+# Cache osmnx (reponses Overpass API)
+cache/
