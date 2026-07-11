@@ -34,6 +34,9 @@ DEFAULT_LAYERS = {
     "section_de_points_de_repere": "BDTOPO_V3:section_de_points_de_repere",
     "non_communication": "BDTOPO_V3:non_communication",
     "equipement_de_transport": "BDTOPO_V3:equipement_de_transport",
+    # Reseau ferre
+    "troncon_de_voie_ferree": "BDTOPO_V3:troncon_de_voie_ferree",
+    "voie_ferree_nommee": "BDTOPO_V3:voie_ferree_nommee",
     # Hydrographie
     "troncon_hydrographique": "BDTOPO_V3:troncon_hydrographique",
     "cours_d_eau": "BDTOPO_V3:cours_d_eau",
