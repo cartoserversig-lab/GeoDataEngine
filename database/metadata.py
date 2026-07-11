@@ -18,7 +18,7 @@ def record_layer_metadata(
     source: str,
     producteur: str,
     fichier: str | Path,
-    crs: str,
+    crs: str | None = None,
     resolution: float | None = None,
     traitements: list[str] | None = None,
     metadata_dir: str | Path = DEFAULT_METADATA_DIR,
