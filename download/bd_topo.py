@@ -24,7 +24,16 @@ DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "data" / "raw" / "vec
 # https://data.geopf.fr/wfs/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetCapabilities
 DEFAULT_LAYERS = {
     "batiment": "BDTOPO_V3:batiment",
+    # Reseau routier
     "troncon_de_route": "BDTOPO_V3:troncon_de_route",
+    "route_numerotee_ou_nommee": "BDTOPO_V3:route_numerotee_ou_nommee",
+    "voie_nommee": "BDTOPO_V3:voie_nommee",
+    "itineraire_autre": "BDTOPO_V3:itineraire_autre",
+    "point_d_acces": "BDTOPO_V3:point_d_acces",
+    "point_de_repere": "BDTOPO_V3:point_de_repere",
+    "section_de_points_de_repere": "BDTOPO_V3:section_de_points_de_repere",
+    "non_communication": "BDTOPO_V3:non_communication",
+    "equipement_de_transport": "BDTOPO_V3:equipement_de_transport",
     # Hydrographie
     "troncon_hydrographique": "BDTOPO_V3:troncon_hydrographique",
     "cours_d_eau": "BDTOPO_V3:cours_d_eau",
