@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+import os
 import shutil
+import stat
 from pathlib import Path
 
 import geopandas as gpd
@@ -31,6 +33,19 @@ _LAYER_CREATION_OPTIONS = {"TARGET_ARCGIS_VERSION": "ARCGIS_PRO_3_2_OR_LATER"}
 
 class FileGdbError(RuntimeError):
     """Erreur lors de la compilation de la File Geodatabase finale."""
+
+
+def _clear_readonly_and_retry(func, path, exc_info) -> None:
+    """onerror de shutil.rmtree : leve le drapeau lecture-seule puis reessaie.
+
+    OneDrive (Files On-Demand) marque frequemment lecture-seule les
+    dossiers qu'il vient de synchroniser, y compris juste apres la
+    creation d'un .gdb par un run precedent : shutil.rmtree echoue alors
+    avec PermissionError des le premier fichier rencontre, meme si aucun
+    programme externe n'a reellement le dossier ouvert.
+    """
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 
 def _write_layer(gdf: gpd.GeoDataFrame, output_path: Path, layer_name: str) -> None:
@@ -68,7 +83,7 @@ def compile_filegdb(
 
     if output_path.exists():
         try:
-            shutil.rmtree(output_path)
+            shutil.rmtree(output_path, onerror=_clear_readonly_and_retry)
         except PermissionError as exc:
             raise FileGdbError(
                 f"Impossible de remplacer {output_path} : le dossier est ouvert dans un autre "

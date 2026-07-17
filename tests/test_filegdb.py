@@ -1,3 +1,6 @@
+import os
+import stat
+
 import fiona
 import geopandas as gpd
 from shapely.geometry import Point, Polygon
@@ -67,3 +70,24 @@ def test_compile_filegdb_splits_mixed_geometry_layers(tmp_path):
         assert len(src) == 1
     with fiona.open(str(output_path), layer="infrastructures_commerces_polygone") as src:
         assert len(src) == 1
+
+
+def test_compile_filegdb_replaces_readonly_existing_gdb(tmp_path):
+    # Reproduit un dossier .gdb existant dont OneDrive (Files On-Demand) a
+    # marque le contenu en lecture seule apres un run precedent :
+    # shutil.rmtree doit s'en accommoder plutot que lever une erreur.
+    processed_dir = tmp_path / "processed"
+    (processed_dir / "bd_topo").mkdir(parents=True)
+    gpd.GeoDataFrame(
+        {"id": [1]}, geometry=[Point(0, 0)], crs="EPSG:2154"
+    ).to_file(processed_dir / "bd_topo" / "batiment.gpkg", driver="GPKG")
+
+    output_path = tmp_path / "database" / "projet.gdb"
+    output_path.mkdir(parents=True)
+    stale_file = output_path / "stale.txt"
+    stale_file.write_text("ancien contenu")
+    os.chmod(stale_file, stat.S_IREAD)
+
+    compile_filegdb(processed_dir, output_path)
+
+    assert fiona.listlayers(str(output_path)) == ["bd_topo_batiment"]
